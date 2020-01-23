@@ -215,7 +215,6 @@ class DpdLabelGenerator
 
         $shipment = [
             'orderId' => $orderId,
-            'smallParcelNumber' => Configuration::get('dpdconnect_spr'),
             'sendingDepot' => Configuration::get('dpdconnect_depot'),
             'sender' => [
                 'name1' => Configuration::get('dpdconnect_company'),
@@ -245,19 +244,19 @@ class DpdLabelGenerator
         ];
 
         if ($this->dpdParcelPredict->checkIfPredictCarrier($orderId) || $this->dpdParcelPredict->checkIfSaturdayCarrier($orderId)) {
-            $shipment['shipments']['notifications'][] = [
+            $shipment['notifications'][] = [
                 'subject' => 'predict',
-                'channel' => 'email',
+                'channel' => 'EMAIL',
                 'value' => $customer->email,
             ];
         }
 
         if ($this->dpdParcelPredict->checkifParcelCarrier($orderId)) {
             $parcelShopID = $this->dpdParcelPredict->getParcelShopId($orderId);
-            $shipment['shipments']['product']['parcelshopId'] = $parcelShopID;
-            $shipment['shipments']['notifications'][] = [
+            $shipment['product']['parcelshopId'] = $parcelShopID;
+            $shipment['notifications'][] = [
                 'subject' => 'parcelshop',
-                'channel' => 'email',
+                'channel' => 'EMAIL',
                 'value' => $customer->email,
             ];
         }
@@ -327,6 +326,7 @@ class DpdLabelGenerator
             'city' => $address->city,
             'country' => $country->iso_code,
             'commercialAddress' => false,
+            'sprn' => Configuration::get('dpdconnect_spr'),
         ];
 
         $shipment['customs']['customsLines'] = $customsLines;
