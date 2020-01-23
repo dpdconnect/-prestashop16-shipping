@@ -342,7 +342,8 @@ class dpdconnect extends Module
                 ],
                 [
                     'type' => 'text',
-                    'label' => $this->l('Small Parcel Reference'),
+                    'label' => $this->l('SPRN'),
+                    'hint' => $this->l('Heeft u een registratienummer van HMRC (douane in UK) beschikbaar, vul deze dan hier in: https://www.gov.uk/guidance/register-for-import-vat-on-parcels-you-sell-to-uk-buyers'),
                     'name' => 'spr',
                     'required' => false
                 ],
