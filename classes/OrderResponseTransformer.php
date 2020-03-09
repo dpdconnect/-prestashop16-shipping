@@ -14,13 +14,13 @@ class OrderResponseTransformer
      */
     public static function parseDetail($map, $detail)
     {
-        $stringPath = 'body.shipments[';
+        $stringPath = 'shipments[';
         return self::parse($map, $detail, $stringPath);
     }
 
     public static function parseAsyncDetail($map, $detail)
     {
-        $stringPath = 'body.label.shipments[';
+        $stringPath = 'label.shipments[';
         return self::parse($map, $detail, $stringPath);
     }
 

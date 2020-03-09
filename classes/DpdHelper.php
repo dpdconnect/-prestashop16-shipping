@@ -62,29 +62,29 @@ class DpdHelper
         $helperForm->submit_action = 'submit'.$module->name;
 
         // Load current value
-        $helperForm->fields_value['dpdconnect_username'] = Configuration::get('dpdconnect_connect_username');
-        $helperForm->fields_value['dpdconnect_password'] = Configuration::get('dpdconnect_connect_password');
-        $helperForm->fields_value['dpdconnect_depot'] = Configuration::get('dpdconnect_depot');
-        $helperForm->fields_value['company'] = Configuration::get('dpdconnect_company');
-        $helperForm->fields_value['account_type'] = Configuration::get('dpdconnect_account_type');
-        $helperForm->fields_value['street'] = Configuration::get('dpdconnect_street');
-        $helperForm->fields_value['postalcode'] = Configuration::get('dpdconnect_postalcode');
-        $helperForm->fields_value['place'] = Configuration::get('dpdconnect_place');
-        $helperForm->fields_value['country'] = Configuration::get('dpdconnect_country');
-        $helperForm->fields_value['email'] = Configuration::get('dpdconnect_email');
-        $helperForm->fields_value['vatnumber'] = Configuration::get('dpdconnect_vatnumber');
-        $helperForm->fields_value['eorinumber'] = Configuration::get('dpdconnect_eorinumber');
-        $helperForm->fields_value['spr'] = Configuration::get('dpdconnect_spr');
-        $helperForm->fields_value['gmaps_client_key'] =  Configuration::get('gmaps_client_key');
-        $helperForm->fields_value['gmaps_server_key'] =  Configuration::get('gmaps_server_key');
-        $helperForm->fields_value['default_product_hcs'] = Configuration::get('dpdconnect_default_product_hcs');
-        $helperForm->fields_value['default_product_weight'] = Configuration::get('dpdconnect_default_product_weight');
-        $helperForm->fields_value['default_product_country_of_origin'] = Configuration::get('dpdconnect_default_product_country_of_origin');
-        $helperForm->fields_value['country_of_origin_feature'] = Configuration::get('dpdconnect_country_of_origin_feature');
-        $helperForm->fields_value['customs_value_feature'] = Configuration::get('dpdconnect_customs_value_feature');
-        $helperForm->fields_value['hs_code_feature'] = Configuration::get('dpdconnect_hs_code_feature');
-        $helperForm->fields_value['hs_code_feature'] = Configuration::get('dpdconnect_hs_code_feature');
-        $helperForm->fields_value['dpdconnect_url'] = Configuration::get('dpdconnect_connect_url');
+        $helperForm->fields_value['dpdconnect_username'] = Configuration::get('dpdconnect_connect_username') ?: Tools::getValue('dpdconnect_username');
+        $helperForm->fields_value['dpdconnect_password'] = Configuration::get('dpdconnect_connect_password') ?: Tools::getValue('dpdconnect_password');
+        $helperForm->fields_value['dpdconnect_depot'] = Configuration::get('dpdconnect_depot') ?: Tools::getValue('dpdconnect_depot');
+        $helperForm->fields_value['company'] = Configuration::get('dpdconnect_company') ?: Tools::getValue('company');
+        $helperForm->fields_value['account_type'] = Configuration::get('dpdconnect_account_type') ?: Tools::getValue('account_type');
+        $helperForm->fields_value['street'] = Configuration::get('dpdconnect_street') ?: Tools::getValue('street');
+        $helperForm->fields_value['postalcode'] = Configuration::get('dpdconnect_postalcode') ?: Tools::getValue('postalcode');
+        $helperForm->fields_value['place'] = Configuration::get('dpdconnect_place') ?: Tools::getValue('place');
+        $helperForm->fields_value['country'] = Configuration::get('dpdconnect_country') ?: Tools::getValue('country');
+        $helperForm->fields_value['email'] = Configuration::get('dpdconnect_email') ?: Tools::getValue('email');
+        $helperForm->fields_value['vatnumber'] = Configuration::get('dpdconnect_vatnumber') ?: Tools::getValue('vatnumber');
+        $helperForm->fields_value['eorinumber'] = Configuration::get('dpdconnect_eorinumber') ?: Tools::getValue('eorinumber');
+        $helperForm->fields_value['spr'] = Configuration::get('dpdconnect_spr') ?: Tools::getValue('spr');
+        $helperForm->fields_value['gmaps_client_key'] =  Configuration::get('gmaps_client_key') ?: Tools::getValue('gmaps_client_key');
+        $helperForm->fields_value['gmaps_server_key'] =  Configuration::get('gmaps_server_key') ?: Tools::getValue('gmaps_server_key');
+        $helperForm->fields_value['default_product_hcs'] = Configuration::get('dpdconnect_default_product_hcs') ?: Tools::getValue('default_product_hcs');
+        $helperForm->fields_value['default_product_weight'] = Configuration::get('dpdconnect_default_product_weight') ?: Tools::getValue('default_product_weight');
+        $helperForm->fields_value['default_product_country_of_origin'] = Configuration::get('dpdconnect_default_product_country_of_origin') ?: Tools::getValue('default_product_country_of_origin');
+        $helperForm->fields_value['country_of_origin_feature'] = Configuration::get('dpdconnect_country_of_origin_feature') ?: Tools::getValue('country_of_origin_feature');
+        $helperForm->fields_value['customs_value_feature'] = Configuration::get('dpdconnect_customs_value_feature') ?: Tools::getValue('customs_value_feature');
+        $helperForm->fields_value['hs_code_feature'] = Configuration::get('dpdconnect_hs_code_feature') ?: Tools::getValue('hs_code_feature');
+        $helperForm->fields_value['hs_code_feature'] = Configuration::get('dpdconnect_hs_code_feature') ?: Tools::getValue('hs_code_feature');
+        $helperForm->fields_value['dpdconnect_url'] = Configuration::get('dpdconnect_connect_url') ?: Tools::getValue('dpdconnect_url');
 
         return $helperForm->generateForm($fields_form);
     }

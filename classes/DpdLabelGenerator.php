@@ -125,7 +125,7 @@ class DpdLabelGenerator
         if (count($orderIds) > 1) {
             return $this->redirectToZipDownload($labelsForDirectDownload);
         }
-
+		
         return $this->redirectToPdfDownload($labelsForDirectDownload[0]);
     }
 
@@ -219,20 +219,20 @@ class DpdLabelGenerator
             'sender' => [
                 'name1' => Configuration::get('dpdconnect_company'),
                 'street' => Configuration::get('dpdconnect_street'),
-                'country' => Configuration::get('dpdconnect_country'),
+                'country' => strtoupper(Configuration::get('dpdconnect_country')),
                 'postalcode' => Configuration::get('dpdconnect_postalcode'),
                 'city' => Configuration::get('dpdconnect_place'),
-                'phone' => Configuration::get('PS_SHOP_PHONE'),
+                'phoneNumber' => Configuration::get('PS_SHOP_PHONE'),
                 'email' => Configuration::get('dpdconnect_email'),
                 'commercialAddress' => true,
             ],
             'receiver' => [
                 'name1' =>  $fullName,
                 'street' => $street,
-                'country' => $country->iso_code,
+                'country' => strtoupper($country->iso_code),
                 'postalcode' => $address->postcode, // No spaces in zipCode!
                 'city' => $address->city,
-                'phone' => $phone,
+                'phoneNumber' => $phone,
                 'commercialAddress' => false,
                 'vat_number' => Configuration::get('dpdconnect_vatnumber'),
                 'eori_number' => Configuration::get('dpdconnect_eorinumber'),
@@ -297,8 +297,9 @@ class DpdLabelGenerator
             }
             $amount = $customsValue * $row['product_quantity'];
             $totalAmount += $amount;
+
             $customsLines[] = [
-                'description' => substr($row['product_name'], 0, 35),
+                'description' => mb_strcut($row['product_name'], 0, 35),
                 'harmonizedSystemCode' => $hsCode ? $hsCode : "",
                 'originCountry' => $originCountry ? $originCountry : "",
                 'quantity' => (int) $row['product_quantity'],
@@ -315,7 +316,7 @@ class DpdLabelGenerator
             'street' => Configuration::get('dpdconnect_street'),
             'postalcode' => Configuration::get('dpdconnect_postalcode'),
             'city' => Configuration::get('dpdconnect_place'),
-            'country' => Configuration::get('dpdconnect_country'),
+            'country' => strtoupper(Configuration::get('dpdconnect_country')),
             'commercialAddress' => true,
         ];
 
@@ -324,9 +325,9 @@ class DpdLabelGenerator
             'street' => $street,
             'postalcode' => $address->postcode,
             'city' => $address->city,
-            'country' => $country->iso_code,
+            'country' => strtoupper($country->iso_code),
             'commercialAddress' => false,
-            'sprn' => Configuration::get('dpdconnect_spr'),
+            'sprn' => Configuration::get('dpdconnect_spr') ?: '',
         ];
 
         $shipment['customs']['customsLines'] = $customsLines;
