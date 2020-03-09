@@ -70,6 +70,7 @@ class dpdconnect extends Module
         if (parent::install()) {
             Configuration::updateValue('dpd', 'dpdconnect');
             Configuration::updateValue('dpdconnect_parcel_limit', 12);
+            Configuration::updateValue('dpdconnect_connect_url', \DpdConnect\Sdk\Client::ENDPOINT);
         }
 
         // Install Tabs
@@ -276,13 +277,13 @@ class dpdconnect extends Module
                     'type' => 'text',
                     'label' => $this->l('Google Maps Static & Javascript API key'),
                     'name' => 'gmaps_client_key',
-                    'required' => true
+                    'required' => false
                 ],
                 [
                     'type' => 'text',
                     'label' => $this->l('Google Maps Geocoding API key'),
                     'name' => 'gmaps_server_key',
-                    'required' => true
+                    'required' => false
                 ],
             ],
         ];
@@ -420,13 +421,13 @@ class dpdconnect extends Module
             'legend' => [
                 'title' => $this->l('Advanced settings'),
             ],
-            'description' => 'Settings below can be left empty, they are used for development and debugging purposes.',
+            'description' => 'Settings below can be used for development and debugging purposes.',
             'input' => [
                 [
                     'type' => 'text',
                     'label' => $this->l('DPD-Connect url'),
                     'name' => 'dpdconnect_url',
-                    'required' => false
+                    'required' => true
                 ],
             ],
         ];
