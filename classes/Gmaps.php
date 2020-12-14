@@ -12,7 +12,7 @@ class Gmaps
         $gmapsKey = Configuration::get('gmaps_server_key');
 
         $data = urlencode('country:' . $isoCode . '|postal_code:' . $postal_code);
-        $url = "https://maps.googleapis.com/maps/api/geocode/json?key=". $gmapsKey . "&address=". $data . '&sensor=false';
+        $url = "https://maps.googleapis.com/maps/api/geocode/json?key=". $gmapsKey . "&components=". $data . '&sensor=false';
         $source = file_get_contents($url);
 
         $gmapsData = json_decode($source);

@@ -25,6 +25,7 @@ use Db;
 use Order;
 use Address;
 use Country;
+use Currency;
 use DbQuery;
 use Product;
 use LinkCore;
@@ -73,6 +74,15 @@ class DpdLabelGenerator
             'pluginVersion' => Version::plugin(),
         ]));
         $this->dpdClient = $clientBuilder->buildAuthenticatedByPassword($username, $password);
+
+        $this->dpdClient->getAuthentication()->setJwtToken(
+            Configuration::get('dpdconnect_jwt_token') ?: null
+        );
+
+        $this->dpdClient->getAuthentication()->setTokenUpdateCallback(function ($jwtToken) {
+            Configuration::updateValue('dpdconnect_jwt_token', $jwtToken);
+            $this->dpdClient->getAuthentication()->setJwtToken($jwtToken);
+        });
 
         $this->dpdError = new DpdError();
         $this->dpdParcelPredict = new DpdParcelPredict();
@@ -225,6 +235,8 @@ class DpdLabelGenerator
                 'phoneNumber' => Configuration::get('PS_SHOP_PHONE'),
                 'email' => Configuration::get('dpdconnect_email'),
                 'commercialAddress' => true,
+                'vatnumber' => (Configuration::get('dpdconnect_vatnumber') === null) ? 'null' : Configuration::get('dpdconnect_vatnumber'),
+                'eorinumber' => (Configuration::get('dpdconnect_eorinumber') === null) ? 'null' : Configuration::get('dpdconnect_eorinumber'),
             ],
             'receiver' => [
                 'name1' =>  $fullName,
@@ -234,12 +246,13 @@ class DpdLabelGenerator
                 'city' => $address->city,
                 'phoneNumber' => $phone,
                 'commercialAddress' => false,
-                'vat_number' => Configuration::get('dpdconnect_vatnumber'),
-                'eori_number' => Configuration::get('dpdconnect_eorinumber'),
+                'vatnumber' => (Configuration::get('dpdconnect_vatnumber') === null) ? 'null' : Configuration::get('dpdconnect_vatnumber'),
+                'eorinumber' => (Configuration::get('dpdconnect_eorinumber') === null) ? 'null' : Configuration::get('dpdconnect_eorinumber'),
             ],
             'product' => [
                 'productCode' => $productCode,
                 'saturdayDelivery' => $saturdayDelivery,
+                'homeDelivery' => $this->dpdParcelPredict->checkIfPredictCarrier($orderId) || $this->dpdParcelPredict->checkIfSaturdayCarrier($orderId)
             ],
         ];
 
@@ -276,9 +289,10 @@ class DpdLabelGenerator
             array_push($shipment['parcels'], $parcelInfo);
         }
 
+        $currency = new Currency($tempOrder->id_currency);
         $shipment['customs'] = [
             'terms' => 'DAP',
-            'totalCurrency' => 'EUR',
+            'totalCurrency' => $currency->iso_code,
         ];
 
         $totalAmount = 0;
@@ -311,16 +325,19 @@ class DpdLabelGenerator
 
         $shipment['customs']['totalAmount'] = (float) $totalAmount;
 
-        $consignee = [
+        $consignor = [
             'name1' => Configuration::get('dpdconnect_company'),
             'street' => Configuration::get('dpdconnect_street'),
             'postalcode' => Configuration::get('dpdconnect_postalcode'),
             'city' => Configuration::get('dpdconnect_place'),
             'country' => strtoupper(Configuration::get('dpdconnect_country')),
             'commercialAddress' => true,
+            'sprn' => Configuration::get('dpdconnect_spr') ?: '',
+            'vatnumber' => (Configuration::get('dpdconnect_vatnumber') === null) ? 'null' : Configuration::get('dpdconnect_vatnumber'),
+            'eorinumber' => (Configuration::get('dpdconnect_eorinumber') === null) ? 'null' : Configuration::get('dpdconnect_eorinumber'),
         ];
 
-        $consignor = [
+        $consignee = [
             'name1' => $fullName,
             'street' => $street,
             'postalcode' => $address->postcode,
