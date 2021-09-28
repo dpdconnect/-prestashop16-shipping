@@ -52,3 +52,7 @@ CREATE TABLE IF NOT EXISTS `_PREFIX_dpd_product_attributes` (
   PRIMARY KEY (`id_dpd_product_attributes`),
   UNIQUE (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+
+ALTER TABLE `_PREFIX_product`
+    ADD `dpd_shipping_product` VARCHAR(255) NOT NULL DEFAULT 'default',
+    ADD `dpd_carrier_description` TEXT NULL DEFAULT NULL;

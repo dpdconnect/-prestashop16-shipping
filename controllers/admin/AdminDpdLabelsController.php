@@ -20,6 +20,9 @@
 
 require_once(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'dpdconnect.php');
 
+use DpdConnect\classes\DpdLabelGenerator;
+use DpdConnect\classes\FreshFreezeHelper;
+
 class AdminDpdLabelsController extends ModuleAdminController
 {
     public $dpdClient;
@@ -28,6 +31,7 @@ class AdminDpdLabelsController extends ModuleAdminController
     public $delete;
     public $return;
     public $orderIds;
+    public $hasFreshFreezeData;
 
     public function __construct()
     {
@@ -37,6 +41,7 @@ class AdminDpdLabelsController extends ModuleAdminController
         $this->orderIds = Tools::getValue('ids_order');
         $this->delete = Tools::getValue('delete');
         $this->parcels = Tools::getValue('parcel');
+        $this->hasFreshFreezeData = Tools::getIsset('hasFreshFreezeData');
         $this->return = (boolean)Tools::getValue('return');
     }
 
@@ -52,12 +57,44 @@ class AdminDpdLabelsController extends ModuleAdminController
     public function initContent()
     {
         parent::initContent();
+
         if ($this->delete) {
             if ($this->dpdLabelGenerator->deleteLabelFromDb($this->orderIds, $this->return)) {
-                $this->confirmations[]  = $this->l('Label is deleted succesfull');
+                $this->confirmations[]  = $this->l('Label is deleted successfully');
             }
         } else {
-            $this->dpdLabelGenerator->generateLabel($this->orderIds, $this->parcels, $this->return);
+            $freshFreezeData = [];
+
+            // Redirect to Fresh/Freeze page if order(s) contain Fresh or Freeze products
+            if (!$this->return && FreshFreezeHelper::ordersContainFreshFreezeProducts($this->orderIds)) {
+                $labelsExist = true;
+                // Prevent entering fresh/freeze data if labels are created already
+                foreach ($this->orderIds as $orderId) {
+                    if (
+                        FreshFreezeHelper::ordersContainFreshFreezeProducts([$orderId]) &&
+                        !DpdLabelGenerator::getLabelOutOfDb($orderId, $this->return)
+                    ) {
+                        $labelsExist = false;
+                        break;
+                    }
+                }
+
+                if (!$this->hasFreshFreezeData && !$labelsExist) {
+                    $link = new LinkCore;
+                    $urlFreshFreeze = $link->getAdminLink('AdminDpdFreshFreeze');
+                    $urlFreshFreeze = $urlFreshFreeze . '&' . http_build_query(['ids_order' => $this->orderIds, 'parcel' => $this->parcels]);
+
+                    Tools::redirectAdmin($urlFreshFreeze);
+                }
+
+                // Collect fresh/freeze data from submitted POST
+                $freshFreezeData = FreshFreezeHelper::collectFreshFreezeData();
+            }
+
+            if ($this->parcels == 0) {
+                $this->parcels = 1;
+            }
+            $this->dpdLabelGenerator->generateLabel($this->orderIds, $this->parcels, $this->return, $freshFreezeData);
         }
         $this->checkErrors();
     }

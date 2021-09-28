@@ -88,7 +88,7 @@ class DpdLabelGenerator
         $this->dpdParcelPredict = new DpdParcelPredict();
     }
 
-    public function generateLabel($orderIds, $parcelCount, $return)
+    public function generateLabel($orderIds, $parcelCount, $return, $freshFreezeData = array())
     {
         if (isset($this->errors['LOGIN_8'])) {
             $this->errors['LOGIN_8'] = $this->dpdError->get('LOGIN_8');
@@ -96,25 +96,32 @@ class DpdLabelGenerator
         $labelsForDirectDownload = [];
         $labelRequests = [];
 
-        foreach ($orderIds as $orderId) {
+        $bundledOrders = FreshFreezeHelper::bundleOrders($orderIds);
+
+        // Create shipment for every dpd shipping type
+        foreach ($bundledOrders as $orderId => $orders) {
             if (!$this->dpdParcelPredict->checkIfDpdSending($orderId)) {
                 continue;
             }
 
             $result = $this->getLabelOutOfDb($orderId, $return);
             if ($result) {
-                $labelsForDirectDownload[] = [
-                    'pdf' => $result[0]['label'],
-                    'mpsId' => $result[0]['mps_id'],
-                ];
+                foreach ($result as $label) {
+                    $labelsForDirectDownload[] = [
+                        'pdf' => $label['label'],
+                        'mpsId' => $label['mps_id'],
+                    ];
+                }
                 continue;
             }
 
-            try {
-                $labelRequests[] = $this->generateShipmentInfo($orderId, $parcelCount, $return);
-            } catch (InvalidRequestException $e) {
-                $this->errors['VALIDATION'] = 'Multiple parcels is only allowed for countries inside EU.';
-                return;
+            foreach ($orders as $shippingType => $orderProducts) {
+                try {
+                    $labelRequests[] = $this->generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData);
+                } catch (InvalidRequestException $e) {
+                    $this->errors['VALIDATION'] = 'Multiple parcels is only allowed for countries inside EU.';
+                    return;
+                }
             }
         }
 
@@ -132,21 +139,22 @@ class DpdLabelGenerator
             }
         }
 
-        if (count($orderIds) > 1) {
+        if (count($labelsForDirectDownload) > 1) {
             return $this->redirectToZipDownload($labelsForDirectDownload);
         }
 		
         return $this->redirectToPdfDownload($labelsForDirectDownload[0]);
     }
 
-    public function generateShipmentInfo($orderId, $parcelCount, $return)
+    public function generateShipmentInfo($orderId, $orderProducts, $parcelCount, $return, $freshFreezeData)
     {
         if ($parcelCount === null || $parcelCount === false) {
             $parcelCount = 1;
         }
         $tempOrder = new Order($orderId);
-        $orderDetails = OrderDetail::getList($orderId);
+//        $orderDetails = OrderDetail::getList($orderId);
         $address = new Address((int)$tempOrder->id_address_delivery);
+        $dpdShippingType = $orderProducts[0]['dpd_shipping_product'];
 
         $country = new Country($address->id_country);
         $multipleParcelsAllowed = $this->isPartOfSingleMarket($country->iso_code);
@@ -166,11 +174,11 @@ class DpdLabelGenerator
         $saturdayDelivery = false;
         $orderType = 'consignment';
 
-        foreach ($orderDetails as $orderDetail) {
-            if ($orderDetail['product_weight'] == 0) {
-                $orderDetail['product_weight'] = 5;
+        foreach ($orderProducts as $orderProduct) {
+            if ((float)$orderProduct['product_weight'] <= 0) {
+                $orderProduct['product_weight'] = '5.0';
             }
-            $weightTotal += $orderDetail['product_weight'] * $orderDetail['product_quantity'];
+            $weightTotal += ((float)$orderProduct['product_weight'] / 100) * (int)$orderProduct['product_quantity'];
         }
         $weightTotal *= 100;
         if (($this->dpdParcelPredict->checkIfSaturdayCarrier($orderId) ||  $this->dpdParcelPredict->checkIfClassicSaturdayCarrier($orderId)) && !$return) {
@@ -223,8 +231,17 @@ class DpdLabelGenerator
             $productCode = 'RETURN';
         }
 
+        if (!$return && $dpdShippingType === FreshFreezeHelper::TYPE_FRESH) {
+            $productCode = strtoupper(FreshFreezeHelper::TYPE_FRESH);
+        }
+
+        if (!$return && $dpdShippingType === FreshFreezeHelper::TYPE_FREEZE) {
+            $productCode = strtoupper(FreshFreezeHelper::TYPE_FREEZE);
+        }
+
+
         $shipment = [
-            'orderId' => $orderId,
+            'orderId' => (string)$orderId,
             'sendingDepot' => Configuration::get('dpdconnect_depot'),
             'sender' => [
                 'name1' => Configuration::get('dpdconnect_company'),
@@ -245,6 +262,7 @@ class DpdLabelGenerator
                 'postalcode' => $address->postcode, // No spaces in zipCode!
                 'city' => $address->city,
                 'phoneNumber' => $phone,
+                'email' => $customer->email,
                 'commercialAddress' => false,
                 'vatnumber' => (Configuration::get('dpdconnect_vatnumber') === null) ? 'null' : Configuration::get('dpdconnect_vatnumber'),
                 'eorinumber' => (Configuration::get('dpdconnect_eorinumber') === null) ? 'null' : Configuration::get('dpdconnect_eorinumber'),
@@ -276,18 +294,30 @@ class DpdLabelGenerator
 
         $shipment['parcels'] = [];
 
-        for ($x = 1; $x <= $parcelCount; $x++) {
-            $parcelInfo = [
-                'customerReferenceNumber1' => $orderId,
-                'weight' => (int) ceil($weightTotal / $parcelCount),
-            ];
+        if (!$return && FreshFreezeHelper::shippingTypeIsFreshOrFreeze($dpdShippingType)) {
+            $shipment['parcels'] = $this->generateFreshFreezeParcels(
+                $orderProducts,
+                ceil($weightTotal / $parcelCount) * 100,
+                $freshFreezeData,
+                $parcelCount
+            );
+        } else {
+            for ($x = 1; $x <= $parcelCount; $x++) {
+                $parcelInfo = [
+                    'customerReferences' => [
+                        (string)$orderId
+                    ],
+                    'weight' => (int) ceil($weightTotal / $parcelCount) * 100,
+                ];
 
-            if ((boolean)$return) {
-                $parcelInfo['returns'] = true;
+                if ((boolean)$return) {
+                    $parcelInfo['returns'] = true;
+                }
+
+                array_push($shipment['parcels'], $parcelInfo);
             }
-
-            array_push($shipment['parcels'], $parcelInfo);
         }
+
 
         $currency = new Currency($tempOrder->id_currency);
         $shipment['customs'] = [
@@ -297,11 +327,10 @@ class DpdLabelGenerator
 
         $totalAmount = 0;
 
-        $rows = $tempOrder->getWsOrderRows();
         $customsLines = [];
 
-        foreach ($rows as $row) {
-            $product = new Product($row['product_id']);
+        foreach ($orderProducts as $orderProduct) {
+            $product = new Product($orderProduct['product_id']);
             $hsCode = $this->getHsCode($product);
             $customsValue = $this->getCustomsValue($product);
             $originCountry = $this->getCountryOfOrigin($product);
@@ -309,14 +338,14 @@ class DpdLabelGenerator
             if ($weight === 0) {
                 $weight = Configuration::get('dpdconnect_default_product_weight');
             }
-            $amount = $customsValue * $row['product_quantity'];
+            $amount = $customsValue * $orderProduct['product_quantity'];
             $totalAmount += $amount;
 
             $customsLines[] = [
-                'description' => mb_strcut($row['product_name'], 0, 35),
+                'description' => mb_strcut($orderProduct['product_name'], 0, 35),
                 'harmonizedSystemCode' => $hsCode ? $hsCode : "",
                 'originCountry' => $originCountry ? $originCountry : "",
-                'quantity' => (int) $row['product_quantity'],
+                'quantity' => (int) $orderProduct['product_quantity'],
                 'netWeight' => (int) $weight,
                 'grossWeight' => (int) $weight,
                 'totalAmount' => (float) ($amount),
@@ -384,7 +413,7 @@ class DpdLabelGenerator
     public static function deleteLabelFromDb($ordersId, $return)
     {
         foreach ($ordersId as $orderId) {
-            Db::getInstance()->delete('dpdshipment_label', 'order_id=' . pSQL($orderId) . ' AND retour=' . pSQL((int)$return), 1);
+            Db::getInstance()->delete('dpdshipment_label', 'order_id=' . pSQL($orderId) . ' AND retour=' . pSQL((int)$return));
 
             $tempOrder = new Order($orderId);
             // so it empty the shipping number.
@@ -624,5 +653,30 @@ class DpdLabelGenerator
     {
         $countries = $this->dpdClient->getCountries()->getList();
         return array_search(strtoupper($iso2), array_column($countries, 'country'), true);
+    }
+
+    private function generateFreshFreezeParcels($orderProducts, $weight, $freshFreezeData, $parcelCount)
+    {
+        $parcels = [];
+
+        foreach ($orderProducts as $orderProduct) {
+            $orderId = (int)$orderProduct['id_order'];
+            $expirationDate = $freshFreezeData[$orderId][$orderProduct['product_id']]['expiration_date'];
+            $expirationDate = str_replace('-', '', $expirationDate);
+
+            for ($i = 0; $i < $parcelCount; $i++) {
+                $parcels[] = [
+                    'customerReferences' => [
+                        (string)$orderProduct['id_order'],
+                        $orderProduct['reference']
+                    ],
+                    'weight' => (int) $weight,
+                    'goodsExpirationDate' => (int)$expirationDate,
+                    'goodsDescription' => mb_strcut($freshFreezeData[$orderId][$orderProduct['product_id']]['carrier_description'], 0, 34)
+                ];
+            }
+        }
+
+        return $parcels;
     }
 }
