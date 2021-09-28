@@ -95,7 +95,7 @@ class DpdCarrier extends CarrierModule
                 $carrier->name = $info['name'];
                 $carrier->delay[Configuration::get('PS_LANG_DEFAULT')] = (string)$info['description'];
                 $carrier->active = 0;
-                $carrier->deleted = 1;
+                $carrier->deleted = 0;
                 $carrier->shipping_handling = 1;
                 $carrier->range_behavior = 0;
                 $carrier->shipping_external = 0;
@@ -105,28 +105,12 @@ class DpdCarrier extends CarrierModule
                 Configuration::updateValue($this->dpdPrefix . strtolower($prefix), $carrier->id);
 
 //                  copy(dirname(__DIR__) . '/../logo.png', _PS_SHIP_IMG_DIR_ . '/' . (int)$carrier->id . '.jpg'); //assign carrier logo
+            } else {
+                $this->unDeleteCarrier(Configuration::get($this->dpdPrefix . strtolower($prefix)));
             }
         }
-        $this->setCarrierForAccountType();
         return true;
     }
-
-    public function setCarrierForAccountType()
-    {
-        $accountType = Configuration::get($this->dpdPrefix . 'account_type');
-
-        foreach ($this->carrierNames as $prefix => $info) {
-            $configCarrierId = Configuration::get($this->dpdPrefix . $prefix);
-
-            $carrierId = $this->getLatestCarrierByReferenceId($configCarrierId, false);
-            if ($info['type'] == $accountType) {
-                $this->unDeleteCarrier($carrierId);
-            } else {
-                $this->softDeleteCarriers($carrierId);
-            }
-        }
-    }
-
 
     public function deleteCarriers()
     {

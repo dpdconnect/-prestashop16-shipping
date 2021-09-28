@@ -135,13 +135,9 @@
     .city {
         border-left:1px solid #ddd;
     }
-    #googlemap {
+    #dpd-connect-map-container {
         display: none;
     }
-    #googlemap_shops {
-        display: block;
-    }
-
 }
 @media (max-width: 416px) {
     .search-input,
@@ -159,67 +155,21 @@
     }
 }
 @media (min-width: 768px) {
-    #googlemap {
+    #dpd-connect-map-container {
         display: block;
     }
-    #googlemap_shops {
-        display: none !important;
-    }
-    .parcel_modal {
-        display: none !important;
-    }
 }
-#parcelshops{
-    display: none;
-}
-#parcelshops ul {
-    border: 1px solid #d6d4d4;
-}
-#parcelshops .sidebar_single {
-    background-color: white;
-    border-bottom: 1px solid #e6e7e7;
-    color: black;
-    display: block;
-    padding: 15px;
-}
-#parcelshops .sidebar_single .company {
-    font-size: 16px;
-    text-transform: uppercase;
-}
-#parcelshops .sidebar_single .modal-link a {
-    padding: 15px 0 0 0;
-}
-#parcelshops .ParcelShops {
-    cursor: pointer;
-}
-#parcelshops .parcel_modal {
-    display: none;
-}
-#parcelshops .parcel_modal .go-back {
-    float: right;
-    cursor: pointer;
-    margin: 10px 0px 0px 10px;
-}
-#parcelshops .more-information {
-    cursor: pointer;
-}
-#googlemap{
+#dpd-connect-map-container{
     margin-bottom: 20px;
     width: 100% ;
     height:450px;
 }
-#googlemap_shop {
-    display: none;
-    border: 1px solid #d6d4d4;
-    background-color: white;
-    padding: 15px;
-}
-
-.selected-parcelshop{
+#dpd-connect-selected-container{
     border: 1px solid #d6d4d4;
     background-color: white;
     padding: 15px;
     display: none;
+    margin-bottom: 20px;
 }
 
 .dpd-alert{

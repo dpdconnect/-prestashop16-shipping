@@ -88,8 +88,9 @@ class OrderOpcController extends OrderOpcControllerCore
     public function setMedia()
     {
         parent::setMedia();
+        $this->addJS(Configuration::get('dpdconnect_connect_url') . '/parcelshop/map/js');
+//        $this->addJS('https://maps.googleapis.com/maps/api/js?key=' . Configuration::get('gmaps_client_key'));
         $this->addJS(_PS_MODULE_DIR_ . 'dpdconnect' . DS . 'views' . DS  . 'js' . DS . 'dpdLocator.js');
         $this->addCSS(_PS_MODULE_DIR_ . 'dpdconnect' . DS . 'views' . DS  . 'css' . DS . 'dpdLocator.css');
-        $this->addJS('https://maps.googleapis.com/maps/api/js?key=' . Configuration::get('gmaps_client_key'));
     }
 }

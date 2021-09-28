@@ -27,11 +27,13 @@ class dpdconnect extends Module
     public $dpdHelper;
     public $dpdCarrier;
     public $dpdParcelPredict;
+    public $dpdCustomTemplates;
 
     private $ownControllers = [
         'AdminDpdLabels' => 'DPD label',
         'AdminDpdShippingList' => 'DPD ShippingList',
         'AdminDpdProductAttributesController' => 'DPD Product Attributes',
+        'AdminDpdFreshFreeze' => 'DPD Fresh/Freeze',
     ];
     private $hooks = [
         'displayAdminOrderTabOrder',
@@ -50,6 +52,9 @@ class dpdconnect extends Module
         $this->dpdHelper = new \DpdConnect\classes\DpdHelper();
         $this->dpdCarrier = new \DpdConnect\classes\DpdCarrier();
         $this->dpdParcelPredict = new \DpdConnect\classes\DpdParcelPredict();
+        $this->dpdCustomTemplates = [
+            'override/controllers/admin/templates/products/shipping.tpl',
+        ];
 
         // the information about the plugin.
         $this->version = self::VERSION;
@@ -71,6 +76,19 @@ class dpdconnect extends Module
             Configuration::updateValue('dpd', 'dpdconnect');
             Configuration::updateValue('dpdconnect_parcel_limit', 12);
             Configuration::updateValue('dpdconnect_connect_url', \DpdConnect\Sdk\Client::ENDPOINT);
+
+            // Use one of previous keys before update to store in new 'gmaps_key'
+            $gmapsKey = '';
+            if (Configuration::get('gmaps_client_key')) {
+                // Use client key
+                $gmapsKey = Configuration::get('gmaps_client_key');
+            } else if(!$gmapsKey && Configuration::get('gmaps_server_key')) {
+                // Client key was not set, so we use server key
+                $gmapsKey = Configuration::get('gmaps_server_key');
+            }
+
+            Configuration::updateValue('gmaps_key', $gmapsKey);
+            Configuration::updateValue('use_gmaps_key', 1);
         }
 
         // Install Tabs
@@ -107,7 +125,25 @@ class dpdconnect extends Module
             //TODO create a log that the carrier could not be installed
             return false;
         }
+        // Add custom templates
+	    if (!$this->addOverrideTemplates()) {
+            return false;
+	    }
         return true;
+    }
+
+    public function enable($force_all = false)
+    {
+        parent::enable($force_all);
+
+        $this->addOverrideTemplates();
+    }
+
+    public function disable($force_all = false)
+    {
+        parent::disable($force_all);
+
+        $this->removeOverrideTemplates();
     }
 
     /**
@@ -131,6 +167,10 @@ class dpdconnect extends Module
 
             $this->dpdCarrier->deleteCarriers();
             Configuration::updateValue('dpd', 'not installed');
+
+            // Remove custom templates
+            $this->removeOverrideTemplates();
+
             return true;
         }
     }
@@ -157,9 +197,8 @@ class dpdconnect extends Module
             $vatnumber = strval(Tools::getValue("vatnumber"));
             $eorinumber = strval(Tools::getValue("eorinumber"));
             $spr = strval(Tools::getValue("spr"));
-            $accountType = Tools::getValue('account_type');
-            $gmapsClientKey = Tools::getValue('gmaps_client_key');
-            $gmapsServerKey = Tools::getValue('gmaps_server_key');
+            $gmapsKey = Tools::getValue('gmaps_key');
+            $useGmapsKey = Tools::getValue('use_gmaps_key');
             $defaultProductHcs = Tools::getValue('default_product_hcs');
             $defaultProductWeight = Tools::getValue('default_product_weight');
             $defaultProductCountryOfOrigin = Tools::getValue('default_product_country_of_origin');
@@ -190,16 +229,12 @@ class dpdconnect extends Module
             if (empty($email)) {
                 $error = $this->l('Email is obligatory');
             }
-            if (empty($accountType)) {
-                $error = $this->l('Accounttype is obligatory');
-            }
             if (!$error) {
                 Configuration::updateValue('dpdconnect_connect_username', $connectusername);
                 if ($connectpassword) {
                     Configuration::updateValue('dpdconnect_connect_password', $connectpassword);
                 }
                 Configuration::updateValue('dpdconnect_depot', $depot);
-                Configuration::updateValue('dpdconnect_account_type', $accountType);
                 Configuration::updateValue('dpdconnect_company', $company);
                 Configuration::updateValue('dpdconnect_street', $street);
                 Configuration::updateValue('dpdconnect_postalcode', $postalcode);
@@ -209,8 +244,8 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_vatnumber', $vatnumber);
                 Configuration::updateValue('dpdconnect_eorinumber', $eorinumber);
                 Configuration::updateValue('dpdconnect_spr', $spr);
-                Configuration::updateValue('gmaps_client_key', $gmapsClientKey);
-                Configuration::updateValue('gmaps_server_key', $gmapsServerKey);
+                Configuration::updateValue('gmaps_key', $gmapsKey);
+                Configuration::updateValue('use_gmaps_key', $useGmapsKey);
                 Configuration::updateValue('dpdconnect_default_product_hcs', $defaultProductHcs);
                 Configuration::updateValue('dpdconnect_default_product_weight', $defaultProductWeight);
                 Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
@@ -219,8 +254,6 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_hs_code_feature', $hsCodeFeature);
                 Configuration::updateValue('dpdconnect_connect_url', $connecturl);
                 $output .= $this->displayConfirmation($this->l('Settings updated'));
-
-                $this->dpdCarrier->setCarrierForAccountType();
             } else {
                 $output .= $this->displayError($error);
             }
@@ -250,40 +283,32 @@ class dpdconnect extends Module
                     'required' => true
                 ],
                 [
-                    'required' => true,
-                    'type' => 'select',
-                    'label' => $this->l('DPD Account type'),
-                    'name' => 'account_type',
-                    'options' => [
-                        'query' => [
-                            [
-                                'key' => '0',
-                                'name' => $this->l('Please select DPD Account type')
-                            ],
-                            [
-                                'key' => 'b2b',
-                                'name' => $this->l('B2B')
-                            ],
-                            [
-                                'key' => 'b2c',
-                                'name' => $this->l('B2C')
-                            ],
-                        ],
-                        'id' => 'key',
-                        'name' => 'name'
-                    ],
-                ],
-                [
                     'type' => 'text',
-                    'label' => $this->l('Google Maps Static & Javascript API key'),
-                    'name' => 'gmaps_client_key',
+                    'label' => $this->l('Google Maps API key'),
+                    'desc' => $this->l('When below field is "no", this value is required.'),
+                    'name' => 'gmaps_key',
                     'required' => false
                 ],
                 [
-                    'type' => 'text',
-                    'label' => $this->l('Google Maps Geocoding API key'),
-                    'name' => 'gmaps_server_key',
-                    'required' => false
+                    'type'      => 'radio',
+                    'label'     => $this->l("Use DPD's Google Maps API Key"),
+                    'desc'      => $this->l('These may be subject to rate limiting, high volume users should use their own Google keys.'),
+                    'name'      => 'use_gmaps_key',
+                    'required'  => true,
+                    'class'     => 't',
+                    'is_bool'   => true,
+                    'values'    => array(
+                        array(
+                            'id'    => 'yes',
+                            'value' => 1,
+                            'label' => $this->l('Yes')
+                        ),
+                        array(
+                            'id'    => 'no',
+                            'value' => 0,
+                            'label' => $this->l('No')
+                        )
+                    ),
                 ],
             ],
         ];
@@ -516,9 +541,30 @@ class dpdconnect extends Module
 
     public function hookDisplayFooter($params)
     {
+        $dpdPublicToken = new \DpdConnect\Sdk\Resources\Token(
+            new \DpdConnect\Sdk\Common\HttpClient((string)Configuration::get("dpdconnect_connect_url"))
+        );
+        $dpdPublicToken = $dpdPublicToken->getPublicJWTToken(
+            (string)Configuration::get("dpdconnect_connect_username"),
+            \DpdConnect\classes\DpdEncryptionManager::decrypt((string)Configuration::get("dpdconnect_connect_password"))
+        );
+
+        $tempAddress = new Address($params['cart']->id_address_delivery);
+        $shippingAddress = $tempAddress->address1 . ' ' . $tempAddress->postcode . ' ' . $tempAddress->country;
+
+        $useDpdGmapsKey = Configuration::get('use_gmaps_key') == 1;
+        $gmapsKey = '';
+        if (!$useDpdGmapsKey) {
+            $gmapsKey = Configuration::get('gmaps_key');
+        }
+
         $this->context->smarty->assign([
             'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop")),
             'sender' => $params['cart']->id_carrier,
+            'shippingAddress' => $shippingAddress,
+            'dpdPublicToken' => $dpdPublicToken,
+            'shopCountryCode' => $this->context->language->iso_code,
+            'gmapsKey' => $gmapsKey,
             'saturdaySenderIsAllowed' => (int)$this->dpdCarrier->checkIfSaturdayAllowed(),
             'saturdaySender' => (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_saturday")),
             'classicSaturdaySender' => (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_classic_saturday")),
@@ -546,4 +592,45 @@ class dpdconnect extends Module
     {
         return new \DpdConnect\classes\DpdShippingList();
     }
+
+    // Prestashop will only add .php files to the /override folder.
+	// This method manually adds our templates to the /override folder.
+	private function addOverrideTemplates() {
+        $success = true;
+        foreach ($this->dpdCustomTemplates as $template) {
+            $destination = _PS_ROOT_DIR_ . '/' . $template;
+            $customTemplate = $this->local_path . $template;
+
+            if (!Tools::file_exists_cache($destination) && Tools::file_exists_cache($customTemplate)) {
+                $templateDirectory = dirname($destination);
+                if (!Tools::file_exists_no_cache($templateDirectory)) {
+                    $success = $success && @mkdir($templateDirectory, 0755, true);
+                }
+                $success = $success && @copy($customTemplate, $destination);
+
+                do {
+                    if (Tools::file_exists_cache(_PS_ROOT_DIR_.'/config/index.php') && !Tools::file_exists_cache($templateDirectory.'/index.php')) {
+                        $success = $success && @copy(_PS_ROOT_DIR_.'/config/index.php', $templateDirectory.'/index.php');
+                    }
+                    $templateDirectory = dirname($templateDirectory);
+
+                } while (strlen(_PS_ROOT_DIR_) < strlen($templateDirectory));
+            }
+        }
+
+        return $success;
+	}
+
+	// Remove manually added template files from /override
+	private function removeOverrideTemplates() {
+        foreach ($this->dpdCustomTemplates as $template) {
+            $destination = _PS_ROOT_DIR_ . '/' . $template;
+
+            if (file_exists($destination)) {
+                unlink($destination);
+            }
+        }
+
+        return true;
+	}
 }

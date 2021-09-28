@@ -66,7 +66,6 @@ class DpdHelper
         $helperForm->fields_value['dpdconnect_password'] = Configuration::get('dpdconnect_connect_password') ?: Tools::getValue('dpdconnect_password');
         $helperForm->fields_value['dpdconnect_depot'] = Configuration::get('dpdconnect_depot') ?: Tools::getValue('dpdconnect_depot');
         $helperForm->fields_value['company'] = Configuration::get('dpdconnect_company') ?: Tools::getValue('company');
-        $helperForm->fields_value['account_type'] = Configuration::get('dpdconnect_account_type') ?: Tools::getValue('account_type');
         $helperForm->fields_value['street'] = Configuration::get('dpdconnect_street') ?: Tools::getValue('street');
         $helperForm->fields_value['postalcode'] = Configuration::get('dpdconnect_postalcode') ?: Tools::getValue('postalcode');
         $helperForm->fields_value['place'] = Configuration::get('dpdconnect_place') ?: Tools::getValue('place');
@@ -75,8 +74,8 @@ class DpdHelper
         $helperForm->fields_value['vatnumber'] = Configuration::get('dpdconnect_vatnumber') ?: Tools::getValue('vatnumber');
         $helperForm->fields_value['eorinumber'] = Configuration::get('dpdconnect_eorinumber') ?: Tools::getValue('eorinumber');
         $helperForm->fields_value['spr'] = Configuration::get('dpdconnect_spr') ?: Tools::getValue('spr');
-        $helperForm->fields_value['gmaps_client_key'] =  Configuration::get('gmaps_client_key') ?: Tools::getValue('gmaps_client_key');
-        $helperForm->fields_value['gmaps_server_key'] =  Configuration::get('gmaps_server_key') ?: Tools::getValue('gmaps_server_key');
+        $helperForm->fields_value['gmaps_key'] =  Configuration::get('gmaps_key') ?: Tools::getValue('gmaps_key');
+        $helperForm->fields_value['use_gmaps_key'] =  Configuration::get('use_gmaps_key') ?: Tools::getValue('use_gmaps_key');
         $helperForm->fields_value['default_product_hcs'] = Configuration::get('dpdconnect_default_product_hcs') ?: Tools::getValue('default_product_hcs');
         $helperForm->fields_value['default_product_weight'] = Configuration::get('dpdconnect_default_product_weight') ?: Tools::getValue('default_product_weight');
         $helperForm->fields_value['default_product_country_of_origin'] = Configuration::get('dpdconnect_default_product_country_of_origin') ?: Tools::getValue('default_product_country_of_origin');

@@ -40,18 +40,6 @@ class dpdconnectOneStepParcelshopModuleFrontController extends ModuleFrontContro
                 $this->context->cookie->parcelId = $parcelId;
                 die($this->context->cookie->parcelId);
             }
-        } elseif (Tools::getValue('method') === 'getParcelShops') {
-            $address = new Address($this->context->cart->id_address_delivery);
-            $country = new Country($address->id_country);
-            $isoCode = $country->iso_code;
-
-            $geoData = $this->dpdParcelPredict->getGeoData($address->postcode, $isoCode);
-            $parcelShops = $this->dpdParcelPredict->getParcelShops($address->postcode, $isoCode);
-
-            die(Tools::jsonEncode([
-                'parcelShops' => $parcelShops,
-                'geoData' => $geoData
-            ]));
         }
     }
 }
